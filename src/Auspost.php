@@ -41,15 +41,70 @@ class Auspost {
 	/**
 	 * Perform a GetAccounts API call.
 	 *
-	 * @return array the account data
+	 * @return Account the account data
 	 * @throws Exception
 	 */
 	public function getAccountDetails() {
 		$this->sendGetRequest('accounts/' . $this->account_number);
-		$data = $this->getResponse()->data;
+		$data = $this->convertResponse($this->getResponse()->data);
 		$this->closeSocket();
 
-		return $this->convertResponse($data);
+		return new Account($data);
+	}
+
+	/**
+	 * Perform a Prices/Items API call
+	 *
+	 * @param mixed $data
+	 * @return Quote[]
+	 * @throws \Exception
+	 */
+	public function getQuotes($input) {
+		$this->sendPostRequest('prices/items', $input);
+		$data = $this->convertResponse($this->getResponse()->data);
+		$this->closeSocket();
+
+		$quotes = [];
+		dump($data);
+		foreach ($data['items'] as $item) {
+			foreach ($item['prices'] as $price) {
+				if (!array_key_exists($price['product_id'], $quotes)) {
+					$quotes[$price['product_id']] = [
+						'product_id' => $price['product_id'],
+						'product_type' => $price['product_type'],
+						'signature_on_delivery_option' => $price['options']['signature_on_delivery_option'],
+						'authority_to_leave_option' => $price['options']['authority_to_leave_option'],
+						'dangerous_goods_allowed' => $price['options']['dangerous_goods_allowed'],
+						'price_inc_gst' => 0,
+						'price_exc_gst' => 0,
+					];
+				}
+				$quotes[$price['product_id']]['price_inc_gst'] += $price['bundled_price'];
+				$quotes[$price['product_id']]['price_exc_gst'] += $price['bundled_price_ex_gst'];
+
+				if (!$price['options']['signature_on_delivery_option']) {
+					$quotes[$price['product_id']]['signature_on_delivery_option'] = false;
+				}
+				if (!$price['options']['authority_to_leave_option']) {
+					$quotes[$price['product_id']]['authority_to_leave_option'] = false;
+				}
+				if (!$price['options']['authority_to_leave_option']) {
+					$quotes[$price['product_id']]['authority_to_leave_option'] = false;
+				}
+			}
+		}
+		foreach ($quotes as $key => $data) {
+			$quotes[$key] = new Quote($data);
+		}
+		return $quotes;
+	}
+
+	/**
+	 * Start a new shipment for lodging or quoting
+	 * @return \Cognito\Auspost\Shipment
+	 */
+	public function newShipment() {
+		return new Shipment($this);
 	}
 
 	/**
