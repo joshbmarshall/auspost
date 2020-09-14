@@ -65,30 +65,52 @@ class Auspost {
 		$this->closeSocket();
 
 		$quotes = [];
-		dump($data);
+
 		foreach ($data['items'] as $item) {
+			if (array_key_exists('errors', $item)) {
+				foreach ($item['errors'] as $error) {
+					throw new Exception($error['name']);
+				}
+			}
 			foreach ($item['prices'] as $price) {
 				if (!array_key_exists($price['product_id'], $quotes)) {
+					$signature_on_delivery_option = false;
+					$authority_to_leave_option = false;
+					$dangerous_goods_allowed = false;
+					if (array_key_exists('signature_on_delivery_option', $price['options'])) {
+						$signature_on_delivery_option = $price['options']['signature_on_delivery_option'];
+					}
+					if (array_key_exists('authority_to_leave_option', $price['options'])) {
+						$authority_to_leave_option = $price['options']['authority_to_leave_option'];
+					}
+					if (array_key_exists('dangerous_goods_allowed', $price['options'])) {
+						$dangerous_goods_allowed = $price['options']['dangerous_goods_allowed'];
+					}
 					$quotes[$price['product_id']] = [
 						'product_id' => $price['product_id'],
 						'product_type' => $price['product_type'],
-						'signature_on_delivery_option' => $price['options']['signature_on_delivery_option'],
-						'authority_to_leave_option' => $price['options']['authority_to_leave_option'],
-						'dangerous_goods_allowed' => $price['options']['dangerous_goods_allowed'],
+						'signature_on_delivery_option' => $signature_on_delivery_option,
+						'authority_to_leave_option' => $authority_to_leave_option,
+						'dangerous_goods_allowed' => $dangerous_goods_allowed,
 						'price_inc_gst' => 0,
 						'price_exc_gst' => 0,
 					];
 				}
-				$quotes[$price['product_id']]['price_inc_gst'] += $price['bundled_price'];
-				$quotes[$price['product_id']]['price_exc_gst'] += $price['bundled_price_ex_gst'];
+				if (array_key_exists('bundled_price', $price)) {
+					$quotes[$price['product_id']]['price_inc_gst'] += $price['bundled_price'];
+					$quotes[$price['product_id']]['price_exc_gst'] += $price['bundled_price_ex_gst'];
+				} else {
+					$quotes[$price['product_id']]['price_inc_gst'] += $price['calculated_price'];
+					$quotes[$price['product_id']]['price_exc_gst'] += $price['calculated_price_ex_gst'];
+				}
 
-				if (!$price['options']['signature_on_delivery_option']) {
+				if (!$signature_on_delivery_option) {
 					$quotes[$price['product_id']]['signature_on_delivery_option'] = false;
 				}
-				if (!$price['options']['authority_to_leave_option']) {
+				if (!$authority_to_leave_option) {
 					$quotes[$price['product_id']]['authority_to_leave_option'] = false;
 				}
-				if (!$price['options']['authority_to_leave_option']) {
+				if (!$authority_to_leave_option) {
 					$quotes[$price['product_id']]['authority_to_leave_option'] = false;
 				}
 			}
@@ -105,6 +127,84 @@ class Auspost {
 	 */
 	public function newShipment() {
 		return new Shipment($this);
+	}
+
+	/**
+	 * Perform a Shipments API call
+	 *
+	 * @param mixed $data
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function shipments($input) {
+		$this->sendPostRequest('shipments', $input);
+		$data = $this->convertResponse($this->getResponse()->data);
+		$this->closeSocket();
+
+		if (array_key_exists('errors', $data)) {
+			foreach ($data['errors'] as $error) {
+				throw new Exception($error['message']);
+			}
+		}
+
+		return $data;
+	}
+
+    /**
+     * Get all labels for the shipments referenced by id
+     * @param string[] $shipment_ids
+     * @return blob PDF file binary
+     */
+    public function getLabels($shipment_ids) {
+        $group_template = [
+            'layout' => 'A4-1pp',
+            'branded' => true,
+            'left_offset' => 0,
+            'top_offset' => 0,
+        ];
+        $groups = [];
+        foreach ([
+            'Parcel Post',
+			'Express Post',
+			'StarTrack',
+			'Startrack Courier',
+			'On Demand',
+			'International',
+			'Commercial',
+        ] as $group) {
+            $groups[] = array_merge($group_template, [
+                'group' => $group,
+            ]);
+		}
+
+		$shipments = [];
+		foreach ($shipment_ids as $shipment_id) {
+			$shipments[] = [
+				'shipment_id' => $shipment_id,
+			];
+		}
+
+        $request = [
+            'wait_for_label_url' => true,
+            'preferences' => [
+                'type' => 'PRINT',
+                'format' => 'PDF',
+                'groups' => $groups,
+            ],
+            'shipments' => $shipments,
+        ];
+        dump($request);
+
+		$this->sendPostRequest('labels', $request);
+		$data = $this->convertResponse($this->getResponse()->data);
+		$this->closeSocket();
+
+		if (array_key_exists('errors', $data)) {
+			foreach ($data['errors'] as $error) {
+				throw new Exception($error['message']);
+			}
+		}
+		dump($data);
 	}
 
 	/**
