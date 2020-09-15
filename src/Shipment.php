@@ -30,6 +30,7 @@ class Shipment {
     public $from;
     public $to;
     public $parcels;
+    public $delivery_instructions = '';
 
     public $product_id;
     public $shipment_id;
@@ -137,6 +138,7 @@ class Shipment {
                 'country'       => $this->to->country,
                 'phone'         => $this->to->phone,
                 'email'         => $this->to->email,
+                'delivery_instructions' => $this->delivery_instructions,
             ],
             'items' => [],
         ];
@@ -181,8 +183,14 @@ class Shipment {
         }
     }
 
-    public function getLabel() {
-        return $this->_auspost->getLabels([$this->shipment_id]);
+    /**
+     * Get the labels for this shipment
+     * @param LabelType $labelType
+     * @return blob
+     * @throws \Exception
+     */
+    public function getLabel($labelType) {
+        return $this->_auspost->getLabels([$this->shipment_id], $labelType);
     }
 
 }
