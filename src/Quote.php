@@ -25,9 +25,14 @@ class Quote {
     public $dangerous_goods_allowed = false;
     public $price_inc_gst;
     public $price_exc_gst;
+    public $raw_details = [];
 
     public function __construct($details) {
+        $this->raw_details = $details;
         foreach ($details as $key => $data) {
+            if (!property_exists($this, $key)) {
+                continue;
+            }
             $this->$key = $data;
         }
     }

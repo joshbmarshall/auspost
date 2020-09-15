@@ -150,32 +150,32 @@ class Auspost {
 		return $data;
 	}
 
-    /**
-     * Get all labels for the shipments referenced by id
-     * @param string[] $shipment_ids
-     * @param LabelType $label_type
-     * @return blob PDF file binary
-     */
-    public function getLabels($shipment_ids, $label_type) {
-        $group_template = [
-            'layout' => $label_type->layout_type,
-            'branded' => $label_type->branded,
-            'left_offset' => $label_type->left_offset,
-            'top_offset' => $label_type->top_offset,
-        ];
-        $groups = [];
-        foreach ([
-            'Parcel Post',
+	/**
+	 * Get all labels for the shipments referenced by id
+	 * @param string[] $shipment_ids
+	 * @param LabelType $label_type
+	 * @return string url to label file
+	 */
+	public function getLabels($shipment_ids, $label_type) {
+		$group_template = [
+			'layout' => $label_type->layout_type,
+			'branded' => $label_type->branded,
+			'left_offset' => $label_type->left_offset,
+			'top_offset' => $label_type->top_offset,
+		];
+		$groups = [];
+		foreach ([
+			'Parcel Post',
 			'Express Post',
 			'StarTrack',
 			'Startrack Courier',
 			'On Demand',
 			'International',
 			'Commercial',
-        ] as $group) {
-            $groups[] = array_merge($group_template, [
-                'group' => $group,
-            ]);
+		] as $group) {
+			$groups[] = array_merge($group_template, [
+				'group' => $group,
+			]);
 		}
 
 		$shipments = [];
@@ -185,16 +185,15 @@ class Auspost {
 			];
 		}
 
-        $request = [
-            'wait_for_label_url' => true,
-            'preferences' => [
-                'type' => 'PRINT',
-                'format' => $label_type->format,
-                'groups' => $groups,
-            ],
-            'shipments' => $shipments,
-        ];
-        dump($request);
+		$request = [
+			'wait_for_label_url' => true,
+			'preferences' => [
+				'type' => 'PRINT',
+				'format' => $label_type->format,
+				'groups' => $groups,
+			],
+			'shipments' => $shipments,
+		];
 
 		$this->sendPostRequest('labels', $request);
 		$data = $this->convertResponse($this->getResponse()->data);
@@ -205,7 +204,51 @@ class Auspost {
 				throw new Exception($error['message']);
 			}
 		}
-		dump($data);
+		foreach ($data['labels'] as $label) {
+			return $label['url'];
+		}
+
+		return '';
+	}
+
+	/**
+	 * Create an order and return a manifest
+	 * @param string[] $shipment_ids
+	 * @return string url to ? file
+	 */
+	public function createOrder($shipment_ids) {
+		$request = [
+			'shipments' => [],
+		];
+		foreach ($shipment_ids as $shipment_id) {
+			$request['shipments'] = [
+				'shipment_id' => $shipment_id,
+			];
+		}
+
+		$this->sendPutRequest('orders', $request);
+		$data = $this->convertResponse($this->getResponse()->data);
+		$this->closeSocket();
+
+		if (array_key_exists('errors', $data)) {
+			foreach ($data['errors'] as $error) {
+				throw new Exception($error['message']);
+			}
+		}
+
+		// Get the url to the manifest pdf
+		$this->sendGetRequest('accounts/' . $this->account_number . '/orders/' . $data['order']['order_id'] . '/summary');
+		$data['order']['manifest_pdf'] = $this->getResponse()->data;
+		$summarydata = $this->convertResponse($data['order']['manifest_pdf']);
+		$this->closeSocket();
+
+		if (is_array($summarydata) && array_key_exists('errors', $summarydata)) {
+			foreach ($summarydata['errors'] as $error) {
+				throw new Exception($error['message']);
+			}
+		}
+
+		return new Order($data['order']);
 	}
 
 	/**
@@ -291,14 +334,15 @@ class Auspost {
 	 *
 	 * @param string $action the API action component of the URI
 	 * @param array  $data   assoc array containing the data to send
+	 * @param string $type   POST or PUT
 	 *
 	 * @throws Exception on error
 	 */
-	private function sendPostRequest($action, $data) {
+	private function sendPostRequest($action, $data, $type = 'POST') {
 		$encoded_data = json_encode($data);
 
 		$this->createSocket();
-		$headers = $this->buildHttpHeaders('POST', $action, strlen($encoded_data), true);
+		$headers = $this->buildHttpHeaders($type, $action, strlen($encoded_data), true);
 
 		if (fwrite(
 			$this->socket,
@@ -315,18 +359,30 @@ class Auspost {
 	}
 
 	/**
+	 * Sends an HTTP PUT request to the API.
+	 *
+	 * @param string $action the API action component of the URI
+	 * @param array  $data   assoc array containing the data to send
+	 *
+	 * @throws Exception on error
+	 */
+	private function sendPutRequest($action, $data) {
+		return $this->sendPostRequest($action, $data, 'PUT');
+	}
+
+	/**
 	 * Gets the response from the API.
 	 *
 	 * @return \stdClass
 	 */
 	private function getResponse() {
 		$headers = array();
-		$data    = array();
+		$data    = '';
 		$currently_reading_headers = true;
 
 		while (!feof($this->socket)) {
-			$line = fgets($this->socket);
 			if ($currently_reading_headers) {
+				$line = fgets($this->socket);
 				$line = trim($line);
 				if ($line == '') {
 					$currently_reading_headers = false;
@@ -334,7 +390,7 @@ class Auspost {
 					$headers[] = $line;
 				}
 			} else {
-				$data[] = $line;
+				$data .= fread($this->socket, 4096);
 			}
 		}
 
@@ -360,6 +416,6 @@ class Auspost {
 	 * @return array associative array
 	 */
 	private function convertResponse($data) {
-		return json_decode(implode("\n", $data), true);
+		return json_decode($data, true);
 	}
 }

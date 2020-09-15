@@ -186,7 +186,7 @@ class Shipment {
     /**
      * Get the labels for this shipment
      * @param LabelType $labelType
-     * @return blob
+     * @return string url to label
      * @throws \Exception
      */
     public function getLabel($labelType) {

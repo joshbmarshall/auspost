@@ -41,12 +41,14 @@ class Parcel {
     public $packaging_type;
     public $atl_number;
     public $features = [];
+    public $raw_details = [];
 
     public $item_id;
     public $tracking_article_id;
     public $tracking_consigment_id;
 
     public function __construct($details) {
+        $this->raw_details = $details;
         foreach ($details as $key => $data) {
             if ($key == 'addresses') {
                 $addresses = [];
@@ -56,6 +58,8 @@ class Parcel {
                 $this->$key = $addresses;
             } else if ($key == 'valid_from' || $key == 'valid_to') {
                 $this->$key = new \DateTime($data);
+            } else if (!property_exists($this, $key)) {
+                continue;
             } else {
                 $this->$key = $data;
             }

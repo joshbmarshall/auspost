@@ -25,9 +25,14 @@ class PostageProduct {
     public $features;
     public $options;
     public $shipment_features;
+    public $raw_details = [];
 
     public function __construct($details) {
+        $this->raw_details = $details;
         foreach ($details as $key => $data) {
+            if (!property_exists($this, $key)) {
+                continue;
+            }
             $this->$key = $data;
         }
     }

@@ -31,9 +31,14 @@ class Address {
     public $phone         = '';
     public $email         = '';
     public $country       = 'AU';
+    public $raw_details = [];
 
     public function __construct($details = []) {
+        $this->raw_details = $details;
         foreach ($details as $key => $data) {
+            if (!property_exists($this, $key)) {
+                continue;
+            }
             $this->$key = $data;
         }
     }
