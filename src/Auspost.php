@@ -153,14 +153,15 @@ class Auspost {
     /**
      * Get all labels for the shipments referenced by id
      * @param string[] $shipment_ids
+     * @param LabelType $label_type
      * @return blob PDF file binary
      */
-    public function getLabels($shipment_ids) {
+    public function getLabels($shipment_ids, $label_type) {
         $group_template = [
-            'layout' => 'A4-1pp',
-            'branded' => true,
-            'left_offset' => 0,
-            'top_offset' => 0,
+            'layout' => $label_type->layout_type,
+            'branded' => $label_type->branded,
+            'left_offset' => $label_type->left_offset,
+            'top_offset' => $label_type->top_offset,
         ];
         $groups = [];
         foreach ([
@@ -188,7 +189,7 @@ class Auspost {
             'wait_for_label_url' => true,
             'preferences' => [
                 'type' => 'PRINT',
-                'format' => 'PDF',
+                'format' => $label_type->format,
                 'groups' => $groups,
             ],
             'shipments' => $shipments,
