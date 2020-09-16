@@ -69,7 +69,7 @@ class Auspost {
 		foreach ($data['items'] as $item) {
 			if (array_key_exists('errors', $item)) {
 				foreach ($item['errors'] as $error) {
-					throw new Exception($error['name']);
+					throw new Exception($error['message']);
 				}
 			}
 			foreach ($item['prices'] as $price) {
