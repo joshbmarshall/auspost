@@ -53,6 +53,22 @@ class Auspost {
 	}
 
 	/**
+	 * Get my address from the account details
+	 *
+	 * @return \Cognito\Auspost\Address|false
+	 * @throws \Exception
+	 */
+	public function getMerchantAddress() {
+		$account = $this->getAccountDetails();
+		foreach ($account->addresses as $address) {
+			if ($address->type == 'MERCHANT_LOCATION') {
+				return $address;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Perform a Prices/Items API call
 	 *
 	 * @param mixed $data
