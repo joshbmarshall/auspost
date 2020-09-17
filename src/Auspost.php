@@ -231,7 +231,7 @@ class Auspost {
 	/**
 	 * Create an order and return a manifest
 	 * @param string[] $shipment_ids
-	 * @return string url to ? file
+	 * @return Order
 	 */
 	public function createOrder($shipment_ids) {
 		$request = [
@@ -266,6 +266,25 @@ class Auspost {
 		}
 
 		return new Order($data['order']);
+	}
+
+	/**
+	 * Delete a shipment by id
+	 * @param string $shipment_id
+	 * @return bool
+	 */
+	public function deleteShipment($shipment_id) {
+		$this->sendDeleteRequest('shipment/' . $shipment_id , null);
+		$data = $this->convertResponse($this->getResponse()->data);
+		$this->closeSocket();
+
+		if (array_key_exists('errors', $data)) {
+			foreach ($data['errors'] as $error) {
+				throw new Exception($error['message']);
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -333,9 +352,9 @@ class Auspost {
 	 *
 	 * @throws Exception on error
 	 */
-	private function sendGetRequest($action) {
+	private function sendGetRequest($action, $type = 'GET') {
 		$this->createSocket();
-		$headers = $this->buildHttpHeaders('GET', $action);
+		$headers = $this->buildHttpHeaders($type, $action);
 
 		if (fwrite(
 			$this->socket,
@@ -344,6 +363,18 @@ class Auspost {
 			throw new Exception('Could not write to Australia Post API');
 		}
 		fflush($this->socket);
+	}
+
+	/**
+	 * Sends an HTTP DELETE request to the API
+	 *
+	 * @param string $action
+	 * @param mixed $data
+	 * @return void
+	 * @throws \Exception
+	 */
+	private function sendDeleteRequest($action, $data) {
+		return $this->sendPostRequest($action, $data, 'DELETE');
 	}
 
 	/**

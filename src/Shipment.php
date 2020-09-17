@@ -193,4 +193,12 @@ class Shipment {
         return $this->_auspost->getLabels([$this->shipment_id], $labelType);
     }
 
+    /**
+     * Delete this shipment
+     * @throws \Exception
+     */
+    public function deleteShipment() {
+        return $this->_auspost->deleteShipment($this->shipment_id);
+    }
+
 }
