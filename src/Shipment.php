@@ -29,7 +29,7 @@ class Shipment {
     public $email_tracking_enabled = true;
     public $from;
     public $to;
-    public $parcels;
+    public $parcels = [];
     public $delivery_instructions = '';
 
     public $product_id;
