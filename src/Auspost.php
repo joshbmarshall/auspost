@@ -81,7 +81,7 @@ class Auspost {
 		$this->closeSocket();
 
 		$quotes = [];
-
+		$is_subsequent_item = false;
 		foreach ($data['items'] as $item) {
 			if (array_key_exists('errors', $item)) {
 				foreach ($item['errors'] as $error) {
@@ -112,7 +112,7 @@ class Auspost {
 						'price_exc_gst' => 0,
 					];
 				}
-				if (array_key_exists('bundled_price', $price)) {
+				if (array_key_exists('bundled_price', $price) && $is_subsequent_item) {
 					$quotes[$price['product_id']]['price_inc_gst'] += $price['bundled_price'];
 					$quotes[$price['product_id']]['price_exc_gst'] += $price['bundled_price_ex_gst'];
 				} else {
@@ -130,6 +130,7 @@ class Auspost {
 					$quotes[$price['product_id']]['authority_to_leave_option'] = false;
 				}
 			}
+			$is_subsequent_item = true;
 		}
 		foreach ($quotes as $key => $data) {
 			$quotes[$key] = new Quote($data);
