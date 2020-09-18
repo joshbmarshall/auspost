@@ -150,7 +150,9 @@ class Shipment {
                 'height'         => $parcel->height,
                 'width'          => $parcel->width,
                 'weight'         => $parcel->weight,
+                'contains_dangerous_goods' => $parcel->contains_dangerous_goods,
                 'authority_to_leave' => $parcel->authority_to_leave,
+                'safe_drop_enabled' => $parcel->safe_drop_enabled,
                 'allow_partial_delivery' => $parcel->allow_partial_delivery,
             ];
             if ($parcel->value) {

@@ -37,6 +37,7 @@ class Parcel {
     public $value;
     public $contains_dangerous_goods = false;
     public $authority_to_leave = false;
+    public $safe_drop_enabled = true;
     public $allow_partial_delivery = true;
     public $packaging_type;
     public $atl_number;
