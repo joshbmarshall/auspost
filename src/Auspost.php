@@ -45,7 +45,7 @@ class Auspost {
 	 * @throws Exception
 	 */
 	public function getAccountDetails() {
-		$this->sendGetRequest('accounts/' . $this->account_number);
+		$this->sendGetRequest('accounts/' . $this->account_number, [], false);
 		$data = $this->convertResponse($this->getResponse()->data);
 		$this->closeSocket();
 
@@ -80,6 +80,11 @@ class Auspost {
 		$data = $this->convertResponse($this->getResponse()->data);
 		$this->closeSocket();
 
+		if (array_key_exists('errors', $data)) {
+			foreach ($data['errors'] as $error) {
+				throw new Exception($error['message']);
+			}
+		}
 		$quotes = [];
 		$is_subsequent_item = false;
 		foreach ($data['items'] as $item) {
@@ -274,11 +279,11 @@ class Auspost {
 	 * @return bool
 	 */
 	public function deleteShipment($shipment_id) {
-		$this->sendDeleteRequest('shipment/' . $shipment_id , null);
+		$this->sendDeleteRequest('shipments/' . $shipment_id, null);
 		$data = $this->convertResponse($this->getResponse()->data);
 		$this->closeSocket();
 
-		if (array_key_exists('errors', $data)) {
+		if (is_array($data) && array_key_exists('errors', $data)) {
 			foreach ($data['errors'] as $error) {
 				throw new Exception($error['message']);
 			}
@@ -352,29 +357,8 @@ class Auspost {
 	 *
 	 * @throws Exception on error
 	 */
-	private function sendGetRequest($action, $type = 'GET') {
-		$this->createSocket();
-		$headers = $this->buildHttpHeaders($type, $action);
-
-		if (fwrite(
-			$this->socket,
-			implode(self::HEADER_EOL, $headers) . self::HEADER_EOL . self::HEADER_EOL
-		) === false) {
-			throw new Exception('Could not write to Australia Post API');
-		}
-		fflush($this->socket);
-	}
-
-	/**
-	 * Sends an HTTP DELETE request to the API
-	 *
-	 * @param string $action
-	 * @param mixed $data
-	 * @return void
-	 * @throws \Exception
-	 */
-	private function sendDeleteRequest($action, $data) {
-		return $this->sendPostRequest($action, $data, 'DELETE');
+	private function sendGetRequest($action, $data = [], $include_account = true) {
+		return $this->sendRequest($action, $data, 'GET', $include_account);
 	}
 
 	/**
@@ -382,28 +366,11 @@ class Auspost {
 	 *
 	 * @param string $action the API action component of the URI
 	 * @param array  $data   assoc array containing the data to send
-	 * @param string $type   POST or PUT
 	 *
 	 * @throws Exception on error
 	 */
-	private function sendPostRequest($action, $data, $type = 'POST') {
-		$encoded_data = json_encode($data);
-
-		$this->createSocket();
-		$headers = $this->buildHttpHeaders($type, $action, strlen($encoded_data), true);
-
-		if (fwrite(
-			$this->socket,
-			implode(self::HEADER_EOL, $headers) . self::HEADER_EOL . self::HEADER_EOL
-		) === false) {
-			throw new Exception('Could not write to Australia Post API');
-		}
-
-		if (fwrite($this->socket, $encoded_data) === false) {
-			throw new Exception('Could not write to Australia Post API');
-		}
-
-		fflush($this->socket);
+	private function sendPostRequest($action, $data) {
+		return $this->sendRequest($action, $data, 'POST');
 	}
 
 	/**
@@ -415,7 +382,50 @@ class Auspost {
 	 * @throws Exception on error
 	 */
 	private function sendPutRequest($action, $data) {
-		return $this->sendPostRequest($action, $data, 'PUT');
+		return $this->sendRequest($action, $data, 'PUT');
+	}
+
+	/**
+	 * Sends an HTTP DELETE request to the API
+	 *
+	 * @param string $action
+	 * @param mixed $data
+	 * @return void
+	 * @throws \Exception
+	 */
+	private function sendDeleteRequest($action, $data) {
+		return $this->sendRequest($action, $data, 'DELETE');
+	}
+
+	/**
+	 * Sends an HTTP POST request to the API.
+	 *
+	 * @param string $action the API action component of the URI
+	 * @param array  $data   assoc array containing the data to send
+	 * @param string $type   GET, POST, PUT, DELETE
+	 *
+	 * @throws Exception on error
+	 */
+	private function sendRequest($action, $data, $type, $include_account = true) {
+		$encoded_data = $data ? json_encode($data) : '';
+
+		$this->createSocket();
+		$headers = $this->buildHttpHeaders($type, $action, strlen($encoded_data), $include_account);
+
+		if (fwrite(
+			$this->socket,
+			implode(self::HEADER_EOL, $headers) . self::HEADER_EOL . self::HEADER_EOL
+		) === false) {
+			throw new Exception('Could not write to Australia Post API');
+		}
+
+		if ($data) {
+			if (fwrite($this->socket, $encoded_data) === false) {
+				throw new Exception('Could not write to Australia Post API');
+			}
+		}
+
+		fflush($this->socket);
 	}
 
 	/**
