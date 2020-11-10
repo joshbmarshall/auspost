@@ -179,7 +179,7 @@ class Shipment {
                     }
                     $this->parcels[$key]->item_id = $item['item_id'];
                     $this->parcels[$key]->tracking_article_id = $item['tracking_details']['article_id'];
-                    $this->parcels[$key]->tracking_consigment_id = $item['tracking_details']['consignment_id'];
+                    $this->parcels[$key]->tracking_consignment_id = $item['tracking_details']['consignment_id'];
                 }
             }
         }
