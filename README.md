@@ -25,7 +25,9 @@ Get a business account at Australia Post and request API access
 
 	$shipment = $auspost->newShipment()
 		->setFrom(new \Cognito\Auspost\Address([
-			'name' => 'Joe Tester',
+			'first_name' => 'Joe',
+			'last_name' => 'Tester',
+			// OR 'name' => 'Joe Tester',
 			'lines' => [
 				'11 MyStreetname Court',
 			],
@@ -35,7 +37,8 @@ Get a business account at Australia Post and request API access
 			'country' => 'AU',
 		]))
 		->setTo(new \Cognito\Auspost\Address([
-			'name' => 'Mary Tester',
+			'first_name' => 'Mary',
+			'last_name' => 'Tester',
 			'lines' => [
 				'10 ReceiverStreetname St',
 			],

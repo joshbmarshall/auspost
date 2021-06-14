@@ -9,6 +9,8 @@ namespace Cognito\Auspost;
  * @author Josh Marshall <josh@jmarshall.com.au>
  *
  * @property string $type
+ * @property string $first_name
+ * @property string $last_name
  * @property string $name
  * @property string $business_name
  * @property string[] $lines
@@ -22,6 +24,8 @@ namespace Cognito\Auspost;
 class Address {
 
     public $type          = '';
+    public $first_name    = '';
+    public $last_name     = '';
     public $name          = '';
     public $business_name = '';
     public $lines         = [];
@@ -40,6 +44,19 @@ class Address {
                 continue;
             }
             $this->$key = $data;
+        }
+        if (!$this->name) {
+            $this->name = trim($this->first_name . ' ' . $this->last_name);
+        }
+        if (!$this->first_name) {
+            $parts = explode(' ', $this->name, 2);
+            if (count($parts) > 1) {
+                $this->first_name = $parts[0];
+                $this->last_name = $parts[1];
+            } else {
+                $this->first_name = $this->name;
+                $this->last_name = $this->name;
+            }
         }
     }
 }

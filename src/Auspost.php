@@ -470,7 +470,7 @@ class Auspost {
 	/**
 	 * Convert the lines of response data into an associative array.
 	 *
-	 * @param array $data lines of response data
+	 * @param string $data lines of response data
 	 * @return array associative array
 	 */
 	private function convertResponse($data) {
