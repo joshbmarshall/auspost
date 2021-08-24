@@ -243,7 +243,7 @@ class Auspost {
 			'shipments' => [],
 		];
 		foreach ($shipment_ids as $shipment_id) {
-			$request['shipments'] = [
+			$request['shipments'][] = [
 				'shipment_id' => $shipment_id,
 			];
 		}
