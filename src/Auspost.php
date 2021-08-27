@@ -474,6 +474,10 @@ class Auspost {
 	 * @return array associative array
 	 */
 	private function convertResponse($data) {
-		return json_decode($data, true);
+		$response = json_decode($data, true);
+		if ($data && is_null($response)) {
+			throw new \Exception('Could not decode response');
+		}
+		return $response;
 	}
 }
