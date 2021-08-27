@@ -251,6 +251,13 @@ class Auspost {
 		$this->sendPutRequest('orders', $request);
 		$data = $this->convertResponse($this->getResponse()->data);
 		$this->closeSocket();
+		if (!is_array($data)) {
+			return new Order([
+				'order_id' => 'None',
+				'creation_date' => new \DateTime(),
+				'manifest_pdf' => $data,
+			]);
+		}
 
 		if (array_key_exists('errors', $data)) {
 			foreach ($data['errors'] as $error) {
@@ -476,7 +483,7 @@ class Auspost {
 	private function convertResponse($data) {
 		$response = json_decode($data, true);
 		if ($data && is_null($response)) {
-			throw new \Exception('Could not decode response');
+			return $data; // Could be an inline pdf
 		}
 		return $response;
 	}
