@@ -27,6 +27,7 @@ class Shipment {
     public $customer_reference_1 = '';
     public $customer_reference_2 = '';
     public $email_tracking_enabled = true;
+    public $movement_type = 'DESPATCH';
     public $from;
     public $to;
     public $parcels = [];
@@ -49,6 +50,7 @@ class Shipment {
         $this->to = $data;
         return $this;
     }
+
     /**
      * Add the From address
      * @param Address $data The address to send from
@@ -56,6 +58,16 @@ class Shipment {
      */
     public function setFrom($data) {
         $this->from = $data;
+        return $this;
+    }
+
+    /**
+     * Set the movement type
+     * @param string $data 'DESPATCH' or 'RETURN' or 'TRANSFER'
+     * @return $this
+     */
+    public function setMovementType($data) {
+        $this->movement_type = $data;
         return $this;
     }
 
@@ -117,6 +129,7 @@ class Shipment {
             'customer_reference_1' => $this->customer_reference_1,
             'customer_reference_2' => $this->customer_reference_2,
             'email_tracking_enabled' => $this->email_tracking_enabled,
+            'movement_type' => $this->movement_type,
             'from' => [
                 'name'          => $this->from->name,
                 'business_name' => $this->from->business_name,
