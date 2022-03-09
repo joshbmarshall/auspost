@@ -20,9 +20,10 @@ namespace Cognito\Auspost;
  * @property string $shipment_id The AusPost generated id when lodged
  * @property \DateTime $shipment_lodged_at The time the shipment was lodged
  */
-class Shipment {
-
+class Shipment
+{
     private $_auspost;
+    
     public $shipment_reference;
     public $customer_reference_1 = '';
     public $customer_reference_2 = '';
@@ -31,12 +32,14 @@ class Shipment {
     public $to;
     public $parcels = [];
     public $delivery_instructions = '';
+    public $movementType;
 
     public $product_id;
     public $shipment_id;
     public $shipment_lodged_at;
 
-    public function __construct($api) {
+    public function __construct($api)
+    {
         $this->_auspost = $api;
     }
 
@@ -45,7 +48,8 @@ class Shipment {
      * @param Address $data The address to deliver to
      * @return $this
      */
-    public function setTo($data) {
+    public function setTo($data)
+    {
         $this->to = $data;
         return $this;
     }
@@ -54,12 +58,27 @@ class Shipment {
      * @param Address $data The address to send from
      * @return $this
      */
-    public function setFrom($data) {
+    public function setFrom($data)
+    {
         $this->from = $data;
         return $this;
     }
 
-    public function addParcel($data) {
+    /**
+     * Set movement type for the shipment
+     *
+     * @param string $movementType
+     *
+     * @return void
+     */
+    public function setMovementType($movementType)
+    {
+        $this->movementType = $movementType;
+        return $this;
+    }
+
+    public function addParcel($data)
+    {
         $this->parcels[] = $data;
         return $this;
     }
@@ -69,7 +88,8 @@ class Shipment {
      * @return \Cognito\Auspost\Quote[]
      * @throws \Exception
      */
-    public function getQuotes() {
+    public function getQuotes()
+    {
         $request = [
             'from' => [
                 'postcode' => $this->from->postcode,
@@ -103,7 +123,8 @@ class Shipment {
         return $this->_auspost->getQuotes($request);
     }
 
-    public function lodgeShipment() {
+    public function lodgeShipment()
+    {
         // Determine if Domestic or International
         $domestic_shipping = $this->to->country == 'AU';
 
@@ -117,6 +138,7 @@ class Shipment {
             'customer_reference_1' => $this->customer_reference_1,
             'customer_reference_2' => $this->customer_reference_2,
             'email_tracking_enabled' => $this->email_tracking_enabled,
+            'movement_type' => $this->movementType,
             'from' => [
                 'name'          => $this->from->name,
                 'business_name' => $this->from->business_name,
@@ -142,29 +164,31 @@ class Shipment {
             ],
             'items' => [],
         ];
-        foreach ($this->parcels as $parcel) {
-            $item = [
-                'item_reference' => $parcel->item_reference,
-                'product_id'     => $this->product_id,
-                'length'         => $parcel->length,
-                'height'         => $parcel->height,
-                'width'          => $parcel->width,
-                'weight'         => $parcel->weight,
-                'contains_dangerous_goods' => $parcel->contains_dangerous_goods,
-                'authority_to_leave' => $parcel->authority_to_leave,
-                'safe_drop_enabled' => $parcel->safe_drop_enabled,
-                'allow_partial_delivery' => $parcel->allow_partial_delivery,
-            ];
-            if ($parcel->value) {
-                $item['features'] = [
-                    'TRANSIT_COVER' => [
-                        'attributes' => [
-                            'cover_amount' => $parcel->value,
-                        ]
-                    ]
+        if (is_array($this->parcels) && count($this->parcels)) {
+            foreach ($this->parcels as $parcel) {
+                $item = [
+                    'item_reference' => $parcel->item_reference,
+                    'product_id'     => $this->product_id,
+                    'length'         => $parcel->length,
+                    'height'         => $parcel->height,
+                    'width'          => $parcel->width,
+                    'weight'         => $parcel->weight,
+                    'contains_dangerous_goods' => $parcel->contains_dangerous_goods,
+                    'authority_to_leave' => $parcel->authority_to_leave,
+                    'safe_drop_enabled' => $parcel->safe_drop_enabled,
+                    'allow_partial_delivery' => $parcel->allow_partial_delivery,
                 ];
+                if ($parcel->value) {
+                    $item['features'] = [
+                        'TRANSIT_COVER' => [
+                            'attributes' => [
+                                'cover_amount' => $parcel->value,
+                            ]
+                        ]
+                    ];
+                }
+                $request['items'][] = $item;
             }
-            $request['items'][] = $item;
         }
 
         $response = $this->_auspost->shipments(['shipments' => $request]);
@@ -191,7 +215,8 @@ class Shipment {
      * @return string url to label
      * @throws \Exception
      */
-    public function getLabel($labelType) {
+    public function getLabel($labelType)
+    {
         return $this->_auspost->getLabels([$this->shipment_id], $labelType);
     }
 
@@ -199,8 +224,8 @@ class Shipment {
      * Delete this shipment
      * @throws \Exception
      */
-    public function deleteShipment() {
+    public function deleteShipment()
+    {
         return $this->_auspost->deleteShipment($this->shipment_id);
     }
-
 }
