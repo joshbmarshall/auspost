@@ -16,6 +16,7 @@ class Auspost {
 	private $api_password   = null;
 	private $account_number = null;
 	private $test_mode      = null;
+	private $star_track     = null;
 
 	const API_SCHEME = 'tls://';
 	const API_HOST   = 'digitalapi.auspost.com.au';
@@ -31,10 +32,11 @@ class Auspost {
 	 * @param string $account_number The AusPost Account number
 	 * @param bool $test_mode Whether to use test mode or not
 	 */
-	public function __construct($api_key, $api_password, $account_number, $test_mode = false) {
+	public function __construct($api_key, $api_password, $account_number, $star_track = false, $test_mode = false) {
 		$this->api_key = $api_key;
 		$this->api_password = $api_password;
-		$this->account_number = str_pad($account_number, 10, '0', STR_PAD_LEFT); // Ensure the account number is zero padded 10 digits
+		$this->star_track = $star_track;
+		$this->account_number = !$star_track ? str_pad($account_number, 10, '0', STR_PAD_LEFT) : $account_number; // Ensure the account number is zero padded 10 digits
 		$this->test_mode = $test_mode;
 	}
 
