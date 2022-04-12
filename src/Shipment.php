@@ -84,10 +84,12 @@ class Shipment {
     public function getQuotes() {
         $request = [
             'from' => [
+	              'suburb' => $this->from->suburb,
                 'postcode' => $this->from->postcode,
                 'country' => $this->from->country,
             ],
             'to' => [
+	              'suburb' => $this->to->suburb,
                 'postcode' => $this->to->postcode,
                 'country' => $this->to->country,
             ],
