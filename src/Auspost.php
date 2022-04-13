@@ -16,6 +16,7 @@ class Auspost {
 	private $api_password   = null;
 	private $account_number = null;
 	private $test_mode      = null;
+	private $star_track     = null;
 
 	const API_SCHEME = 'tls://';
 	const API_HOST   = 'digitalapi.auspost.com.au';
@@ -36,6 +37,18 @@ class Auspost {
 		$this->api_password = $api_password;
 		$this->account_number = str_pad($account_number, 10, '0', STR_PAD_LEFT); // Ensure the account number is zero padded 10 digits
 		$this->test_mode = $test_mode;
+	}
+	
+	/**
+	 * Flags the Auspost instance as StarTrack
+	 *
+	 * @param string $account_number The StarTrack Account number
+	 * @return void
+	 */
+	public function starTrack($account_number)
+	{
+		$this->star_track = true;
+		$this->account_number = $account_number;
 	}
 
 	/**
