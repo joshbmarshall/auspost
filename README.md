@@ -16,7 +16,8 @@ Get a business account at Australia Post and request API access
 
 ```
 <?php
-	$auspost = new \Cognito\Auspost\Auspost('Your API Key', 'Your API Password', 'Your Account Number', $testmode);
+	$auspost = new \Cognito\Auspost\Auspost('Your API Key', 'Your API Password', 'Your Account Number', $testmode)
+		->useStarTrack(); // only if using StarTrack
 
 	// Get your account details
 	$account = $auspost->getAccountDetails();
