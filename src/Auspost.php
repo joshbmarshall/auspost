@@ -175,8 +175,8 @@ class Auspost {
 				}
 
 				if ($fuel_surcharge_prices) {
-					$quotes[$price['product_id']]['price_inc_gst'] += $fuel_surcharge_prices['price_inc_gst'];
-					$quotes[$price['product_id']]['price_exc_gst'] += $fuel_surcharge_prices['price_exc_gst'];
+					$quotes[$price['product_id']]['price_inc_gst'] = $fuel_surcharge_prices['price_inc_gst'];
+					$quotes[$price['product_id']]['price_exc_gst'] = $fuel_surcharge_prices['price_exc_gst'];
 				} else if (array_key_exists('bundled_price', $price) && $is_subsequent_item) {
 					$quotes[$price['product_id']]['price_inc_gst'] += $price['bundled_price'];
 					$quotes[$price['product_id']]['price_exc_gst'] += $price['bundled_price_ex_gst'];
