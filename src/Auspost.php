@@ -80,6 +80,48 @@ class Auspost {
 		return false;
 	}
 
+	public function getFuelSurchargeInclusiveQuote($product_id, $input) {
+		try {
+			$items = [];
+			if (!isset($input['from']['state'])) {
+				throw new \Exception('Need State to get quote');
+			}
+			if (!isset($input['to']['state'])) {
+				throw new \Exception('Need State to get quote');
+			}
+			foreach ($input['items'] as $item) {
+				$items[] = [
+					'product_id' => $product_id,
+					'length' => $item['length'],
+					'height' => $item['height'],
+					'width' => $item['width'],
+					'weight' => $item['weight'],
+				];
+			}
+			$request = [
+				'shipments' => [
+					'from' => $input['from'],
+					'to' => $input['to'],
+					'items' => $items,
+				],
+			];
+			$this->sendPostRequest('prices/shipments', $request);
+			$data = $this->convertResponse($this->getResponse()->data);
+			$price_inc_gst = 0;
+			$price_exc_gst = 0;
+			foreach ($data['shipments'] as $shipment) {
+				$price_exc_gst += $shipment['shipment_summary']['total_cost_ex_gst'];
+				$price_inc_gst += $shipment['shipment_summary']['total_cost'];
+			}
+			return [
+				'price_inc_gst' => $price_inc_gst,
+				'price_exc_gst' => $price_exc_gst,
+			];
+		} catch (\Exception $e) {
+			return null;
+		}
+	}
+
 	/**
 	 * Perform a Prices/Items API call
 	 *
@@ -106,6 +148,8 @@ class Auspost {
 				}
 			}
 			foreach ($item['prices'] as $price) {
+				$fuel_surcharge_prices = $this->getFuelSurchargeInclusiveQuote($price['product_id'], $input);
+
 				if (!array_key_exists($price['product_id'], $quotes)) {
 					$signature_on_delivery_option = false;
 					$authority_to_leave_option = false;
@@ -129,7 +173,11 @@ class Auspost {
 						'price_exc_gst' => 0,
 					];
 				}
-				if (array_key_exists('bundled_price', $price) && $is_subsequent_item) {
+
+				if ($fuel_surcharge_prices) {
+					$quotes[$price['product_id']]['price_inc_gst'] += $fuel_surcharge_prices['price_inc_gst'];
+					$quotes[$price['product_id']]['price_exc_gst'] += $fuel_surcharge_prices['price_exc_gst'];
+				} else if (array_key_exists('bundled_price', $price) && $is_subsequent_item) {
 					$quotes[$price['product_id']]['price_inc_gst'] += $price['bundled_price'];
 					$quotes[$price['product_id']]['price_exc_gst'] += $price['bundled_price_ex_gst'];
 				} else {

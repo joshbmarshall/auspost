@@ -84,13 +84,15 @@ class Shipment {
     public function getQuotes() {
         $request = [
             'from' => [
-	              'suburb' => $this->from->suburb,
+                'suburb' => $this->from->suburb,
                 'postcode' => $this->from->postcode,
+                'state' => $this->from->state,
                 'country' => $this->from->country,
             ],
             'to' => [
-	              'suburb' => $this->to->suburb,
+                'suburb' => $this->to->suburb,
                 'postcode' => $this->to->postcode,
+                'state' => $this->to->state,
                 'country' => $this->to->country,
             ],
             'items' => [],
@@ -217,5 +219,4 @@ class Shipment {
     public function deleteShipment() {
         return $this->_auspost->deleteShipment($this->shipment_id);
     }
-
 }
