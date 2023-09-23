@@ -57,9 +57,7 @@ class Auspost {
 	 * @throws Exception
 	 */
 	public function getAccountDetails() {
-		$this->sendGetRequest('accounts/' . $this->account_number, [], false);
-		$data = $this->convertResponse($this->getResponse()->data);
-		$this->closeSocket();
+		$data = $this->sendGetRequest('accounts/' . $this->account_number, [], false);
 
 		return new Account($data);
 	}
@@ -105,8 +103,7 @@ class Auspost {
 					'items' => $items,
 				],
 			];
-			$this->sendPostRequest('prices/shipments', $request);
-			$data = $this->convertResponse($this->getResponse()->data);
+			$data = $this->sendPostRequest('prices/shipments', $request);
 			$price_inc_gst = 0;
 			$price_exc_gst = 0;
 			foreach ($data['shipments'] as $shipment) {
@@ -130,9 +127,7 @@ class Auspost {
 	 * @throws \Exception
 	 */
 	public function getQuotes($input) {
-		$this->sendPostRequest('prices/items', $input);
-		$data = $this->convertResponse($this->getResponse()->data);
-		$this->closeSocket();
+		$data = $this->sendPostRequest('prices/items', $input);
 
 		if (array_key_exists('errors', $data)) {
 			foreach ($data['errors'] as $error) {
@@ -219,9 +214,7 @@ class Auspost {
 	 * @throws \Exception
 	 */
 	public function shipments($input) {
-		$this->sendPostRequest('shipments', $input);
-		$data = $this->convertResponse($this->getResponse()->data);
-		$this->closeSocket();
+		$data = $this->sendPostRequest('shipments', $input);
 
 		if (array_key_exists('errors', $data)) {
 			foreach ($data['errors'] as $error) {
@@ -277,9 +270,7 @@ class Auspost {
 			'shipments' => $shipments,
 		];
 
-		$this->sendPostRequest('labels', $request);
-		$data = $this->convertResponse($this->getResponse()->data);
-		$this->closeSocket();
+		$data = $this->sendPostRequest('labels', $request);
 
 		if (array_key_exists('errors', $data)) {
 			foreach ($data['errors'] as $error) {
@@ -308,9 +299,7 @@ class Auspost {
 			];
 		}
 
-		$this->sendPutRequest('orders', $request);
-		$data = $this->convertResponse($this->getResponse()->data);
-		$this->closeSocket();
+		$data = $this->sendPutRequest('orders', $request);
 		if (!is_array($data)) {
 			return new Order([
 				'order_id' => 'None',
@@ -326,10 +315,8 @@ class Auspost {
 		}
 
 		// Get the url to the manifest pdf
-		$this->sendGetRequest('accounts/' . $this->account_number . '/orders/' . $data['order']['order_id'] . '/summary');
-		$data['order']['manifest_pdf'] = $this->getResponse()->data;
+		$data['order']['manifest_pdf'] = $this->sendGetRequest('accounts/' . $this->account_number . '/orders/' . $data['order']['order_id'] . '/summary');
 		$summarydata = $this->convertResponse($data['order']['manifest_pdf']);
-		$this->closeSocket();
 
 		if (is_array($summarydata) && array_key_exists('errors', $summarydata)) {
 			foreach ($summarydata['errors'] as $error) {
@@ -346,10 +333,7 @@ class Auspost {
 	 * @return bool
 	 */
 	public function deleteShipment($shipment_id) {
-		$this->sendDeleteRequest('shipments/' . $shipment_id, null);
-		$data = $this->convertResponse($this->getResponse()->data);
-		$this->closeSocket();
-
+		$data = $this->sendDeleteRequest('shipments/' . $shipment_id, null);
 		if (is_array($data) && array_key_exists('errors', $data)) {
 			foreach ($data['errors'] as $error) {
 				throw new Exception($error['message']);
@@ -369,52 +353,6 @@ class Auspost {
 			return '/test/shipping/v1/';
 		}
 		return '/shipping/v1/';
-	}
-
-	/**
-	 * Creates a socket connection to the API.
-	 *
-	 * @throws Exception if the socket cannot be opened
-	 */
-	private function createSocket() {
-		$this->socket = fsockopen(
-			self::API_SCHEME . self::API_HOST,
-			self::API_PORT,
-			$errno,
-			$errstr,
-			15
-		);
-		if ($this->socket === false) {
-			throw new Exception('Could not connect to Australia Post API: ' . $errstr, $errno);
-		}
-	}
-
-	/**
-	 * Builds the HTTP request headers.
-	 *
-	 * @param string $request_type    GET/POST/HEAD/DELETE/PUT
-	 * @param string $action          the API action component of the URI
-	 * @param int    $content_length  if true, content is included in the request
-	 * @param bool   $include_account if true, include the account number in the header
-	 *
-	 * @return array each element is a header line
-	 */
-	private function buildHttpHeaders($request_type, $action, $content_length = 0, $include_account = false) {
-		$a_headers   = array();
-		$a_headers[] = $request_type . ' ' . $this->baseUrl() . $action . ' HTTP/1.1';
-		$a_headers[] = 'Authorization: ' . 'Basic ' . base64_encode($this->api_key . ':' . $this->api_password);
-		$a_headers[] = 'Host: ' . self::API_HOST;
-		if ($content_length) {
-			$a_headers[] = 'Content-Type: application/json';
-			$a_headers[] = 'Content-Length: ' . $content_length;
-		}
-		$a_headers[] = 'Accept: */*';
-		if ($include_account) {
-			$a_headers[] = 'Account-Number: ' . $this->account_number;
-		}
-		$a_headers[] = 'Cache-Control: no-cache';
-		$a_headers[] = 'Connection: close';
-		return $a_headers;
 	}
 
 	/**
@@ -475,63 +413,34 @@ class Auspost {
 	 */
 	private function sendRequest($action, $data, $type, $include_account = true) {
 		$encoded_data = $data ? json_encode($data) : '';
-
-		$this->createSocket();
-		$headers = $this->buildHttpHeaders($type, $action, strlen($encoded_data), $include_account);
-
-		if (fwrite(
-			$this->socket,
-			implode(self::HEADER_EOL, $headers) . self::HEADER_EOL . self::HEADER_EOL
-		) === false) {
-			throw new Exception('Could not write to Australia Post API');
+		$headers = [
+			'Authorization: ' . 'Basic ' . base64_encode($this->api_key . ':' . $this->api_password),
+		];
+		if ($include_account) {
+			$headers[] = 'Account-Number: ' . $this->account_number;
 		}
 
-		if ($data) {
-			if (fwrite($this->socket, $encoded_data) === false) {
-				throw new Exception('Could not write to Australia Post API');
-			}
+		$url = 'https://' . self::API_HOST . $this->baseUrl() . $action;
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		if ($type == 'PUT' || $type == 'POST') {
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $encoded_data);
+			$headers[] = 'Content-Type: application/json';
 		}
-
-		fflush($this->socket);
-	}
-
-	/**
-	 * Gets the response from the API.
-	 *
-	 * @return \stdClass
-	 */
-	private function getResponse() {
-		$headers = array();
-		$data    = '';
-		$currently_reading_headers = true;
-
-		while (!feof($this->socket)) {
-			if ($currently_reading_headers) {
-				$line = fgets($this->socket);
-				$line = trim($line);
-				if ($line == '') {
-					$currently_reading_headers = false;
-				} else {
-					$headers[] = $line;
-				}
-			} else {
-				$data .= fread($this->socket, 4096);
-			}
+		if ($type == 'PUT') {
+			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
 		}
+		if ($type == 'DELETE') {
+			curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+		}
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-		$response = new \stdClass;
-		$response->headers = $headers;
-		$response->data = $data;
+		$response = curl_exec($ch);
 
-		return $response;
-	}
-
-	/**
-	 * Closes the socket.
-	 */
-	private function closeSocket() {
-		fclose($this->socket);
-		$this->socket = false;
+		if (!$response) {
+			return false;
+		}
+		return $this->convertResponse($response);
 	}
 
 	/**
